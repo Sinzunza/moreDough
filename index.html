@@ -2,13 +2,160 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MoreDough - Index</title>
+    <title>Home</title>
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+    <div id="home-container">
+        <header>
+            <span id="home-tab">MoreDough</span>
+        </header>
+        <div id="check-div">
+            <h2>Income</h2>
+            <input type="number" id="check-input" placeholder="Enter amount">
+            <h5 id="invalid-check" hidden>Invalid input.</h5>
+            <button id="check-add">Input Check</button>
+        </div>
+        <div id="spending-div">
+            <h2>Spending</h2>
+            <input type="date" id="date-picker" min="" max="" placeholder="Choose Date">
+            <input type="text" id="spend-name" placeholder="Enter name">
+            <input type="number" id="spend-input" placeholder="Enter amount">
+            <h5 id="invalid-spending" hidden>Invalid inputs.</h5>
+            <button id="spend-add">Add Spending</button>
+        </div>
+        <div id="math-div">
+            <h4 id="check-amount"></h4>
+        </div>
+        <div id="savings-div">
+            <h4 id="savings-amount"></h4>
+        </div>
+    </div>
+
     <script>
-        window.location = "views/login.html";
+        const listSpending = [];
+        var savings = 0;
+        var currCheck = 0;
+        const savingsAmount = document.getElementById("savings-amount");
+
+        // Calendar
+        const today = new Date();
+        const todayISO = today.toISOString().split('T')[0];
+
+        const twoWeeksAhead = new Date();
+        twoWeeksAhead.setDate(today.getDate() + 14);
+        const twoWeeksAheadISO = twoWeeksAhead.toISOString().split('T')[0];
+
+        const datePicker = document.getElementById('date-picker');
+        datePicker.setAttribute('min', todayISO);
+        datePicker.setAttribute('max', twoWeeksAheadISO);
+
+        // Functions
+        function enableSwipeToDelete(element) {
+            let startX, currentX;
+            let isSwiping = false;
+          
+            element.addEventListener('touchstart', (e) => {
+                startX = e.touches[0].clientX;
+                isSwiping = true;
+            });
+
+            element.addEventListener('touchmove', (e) => {
+                if (!isSwiping) return;
+          
+                currentX = e.touches[0].clientX;
+                const translateX = currentX - startX;
+          
+                element.style.transform = `translateX(${translateX}px)`;
+            });
+
+            element.addEventListener('touchend', (e) => {
+                isSwiping = false;
+          
+                const threshold = element.offsetWidth / 2;
+          
+                if (currentX - startX > threshold) {
+                    // Swipe right so delete element
+                    const elementId = element.getAttribute('id');
+                    for (var i = 0; i < listSpending.length; i++) {
+                        if (listSpending[i].name == elementId) {
+                            savings += listSpending[i].amount;
+                            listSpending.splice(i, 1);
+                        }
+                    }
+                    element.remove();
+                } else {
+                    // Reset position
+                    element.style.transform = 'translateX(0)';
+                }
+            });
+        }
+
+        // Event Listener
+        document.getElementById("check-add").addEventListener("click", () => {
+            const checkInput = document.getElementById("check-input").value;
+
+            if (!checkInput) {
+                document.getElementById("invalid-check").hidden = false;
+                return;
+            } else {
+                document.getElementById("invalid-check").hidden = true;
+            }
+
+            document.getElementById("check-amount").innerHTML = "+ $" + checkInput + " (check) " + todayISO;
+            savings -= currCheck;
+            savings += checkInput;
+            currCheck = checkInput;
+            savingsAmount.innerHTML = "= $" + Number(savings);
+        });
+
+        // Event Listener
+        document.getElementById("spend-add").addEventListener("click", () => {
+            const spendName = document.getElementById("spend-name").value;
+            const spendInput = document.getElementById("spend-input").value;
+
+            if (!datePicker.value || !spendName || !spendInput) {
+                document.getElementById("invalid-spending").hidden = false;
+                return;
+            } else {
+                document.getElementById("invalid-spending").hidden = true;
+            }
+
+            const spendItem = {amount: spendInput, name: spendName, date: datePicker.value};
+            const newSpending = document.createElement("h4");
+            newSpending.id = spendName;
+            newSpending.classList.add("spend-amounts");
+            newSpending.innerHTML = "- $" + spendItem.amount + " (" + spendItem.name + ") " + spendItem.date;
+            enableSwipeToDelete(newSpending);
+
+            if (listSpending.length == 0) {
+                listSpending.push(spendItem);
+                savings -= spendItem.amount;
+                savingsAmount.innerHTML = "= $" + Number(savings);
+                document.getElementById("math-div").appendChild(newSpending);
+            } else {
+                for (var i = listSpending.length - 1; i >= 0; i--) {
+                    const referenceNode = document.getElementById(listSpending[i].name);
+                    if (spendItem.date >= listSpending[i].date) {
+                        document.getElementById("math-div").insertBefore(newSpending, referenceNode.nextSibling);
+                        if (i == listSpending.length -1) {
+                            listSpending.push(spendItem);
+                        } else {
+                            listSpending.splice(i+1, 0, spendItem);
+                        }
+                        savings -= spendItem.amount;
+                        savingsAmount.innerHTML = "= $" + Number(savings);
+                        break;
+                    } else if (i == 0) {
+                        document.getElementById("math-div").insertBefore(newSpending, referenceNode);
+                        listSpending.splice(i, 0, spendItem);
+                        savings -= spendItem.amount;
+                        savingsAmount.innerHTML = "= $" + Number(savings);
+                    }
+                }
+            }
+        });
     </script>
 </body>
 </html>
